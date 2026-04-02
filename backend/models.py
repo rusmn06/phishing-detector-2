@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from typing import Optional, List, Dict, Any
 
 class AuthenticationResult(BaseModel):
@@ -21,7 +21,7 @@ class ScanResult(BaseModel):
     risk_factors: List[str]
     details: Dict[str, Any]
     
-    # ⭐ Field khusus untuk konten aman ⭐
+    # Field khusus untuk konten aman
     sanitized_body_preview: Optional[str] = None
     email_subject: Optional[str] = None
     from_domain: Optional[str] = None
@@ -41,3 +41,38 @@ class ScanResult(BaseModel):
                 "from_domain": "example.com"
             }
         }
+
+class URLScanRequest(BaseModel):
+    """Request model untuk scan URL langsung."""
+    url: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "url": "https://suspicious-site.com/login"
+            }
+        }
+
+class URLScanResult(BaseModel):
+    """Result model untuk scan URL."""
+    url: str
+    verdict: str  # "safe", "suspicious", "malicious"
+    risk_score: int  # 0-100
+    provider: str
+    details: Dict[str, Any]
+
+class AuthenticationResult(BaseModel):
+    """Struktur hasil analisis otentikasi domain."""
+    spf: Dict[str, Any]
+    dkim: Dict[str, Any]
+    dmarc: Dict[str, Any]
+
+class ScanResult(BaseModel):
+    """Struktur respons utama untuk endpoint /scan."""
+    verdict: str
+    risk_score: int
+    risk_factors: List[str]
+    details: Dict[str, Any]
+    sanitized_body_preview: Optional[str] = None
+    email_subject: Optional[str] = None
+    from_domain: Optional[str] = None

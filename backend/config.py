@@ -9,19 +9,20 @@ class Settings(BaseSettings):
     """
     Kelas untuk mengelola konfigurasi aplikasi.
     Menggunakan Pydantic Settings untuk validasi otomatis.
+    Sesuai blueprint 'Email Phishing Scanner'
     """
     
     # ===========================================
-    # Application Settings
+    # Application Settings (Dari Blueprint)
     # ===========================================
     APP_ENV: str = "development"
     API_V1_STR: str = "/api/v1"
-    #PROJECT_NAME: str = ""
+    PROJECT_NAME: str = "phising-detector-2"
     
     # ===========================================
     # Security & External APIs
     # ===========================================
-    # Google Safe Browsing API Key (untuk deteksi Email)
+    # Google Safe Browsing API Key (untuk deteksi email)
     GOOGLE_SAFE_BROWSING_API_KEY: str = ""
     
     # VirusTotal API Key (untuk deteksi URL phishing)
@@ -37,12 +38,12 @@ class Settings(BaseSettings):
     URL_THREAT_PROVIDER: str = "virustotal"
     
     # ===========================================
-    # Rate Limiting
+    # Rate Limiting (Dari Blueprint)
     # ===========================================
     RATE_LIMIT: str = "5/minute"
     
     # ===========================================
-    # DNS Settings
+    # DNS Settings (Dari Blueprint)
     # ===========================================
     DNS_TIMEOUT: float = 5.0
     DNS_NAMESERVERS: str = "8.8.8.8,8.8.4.4"
@@ -51,7 +52,7 @@ class Settings(BaseSettings):
         env_file = ENV_FILE
         env_file_encoding = "utf-8"
         case_sensitive = True
-        extra = "ignore"
+        extra = "ignore"  # Abaikan variabel .env yang tidak didefinisikan
 
 # Inisialisasi instance settings global
 settings = Settings()

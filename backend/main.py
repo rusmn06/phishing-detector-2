@@ -7,7 +7,8 @@ from utils.file_validator import validate_email_file
 from utils.sanitizer import sanitize_html
 from core.email_parser import parse_eml_file
 from core.analysis import analyze_authenticity
-from core.threat_detector import check_url_threats  # ⭐ GANTI IMPORT
+from core.threat_detector import check_url_threats
+from models import URLScanRequest, URLScanResult  # ⭐ IMPORT BARU
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -35,10 +36,69 @@ async def health_check():
         "environment": settings.APP_ENV
     }
 
+# ===========================================
+# ENDPOINT BARU: Scan URL Langsung
+# ===========================================
+@app.post(f"{settings.API_V1_STR}/scan-url", response_model=URLScanResult)
+async def scan_url(request: URLScanRequest):
+    """
+    Scan URL langsung untuk deteksi phishing/malware.
+    Menggunakan VirusTotal API untuk analisis URL.
+    
+    **Use Case:**
+    - Cek link sebelum diklik
+    - Verifikasi URL dari SMS/WhatsApp
+    - Analisis URL tanpa perlu file email
+    """
+    
+    # Validasi URL sederhana
+    if not request.url.startswith(("http://", "https://")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="URL harus dimulai dengan http:// atau https://"
+        )
+    
+    # Cek URL menggunakan threat detector (VirusTotal)
+    url_threat_results = await check_url_threats([request.url])
+    
+    # Hitung skor risiko berdasarkan hasil
+    risk_score = 0
+    threatening_urls = url_threat_results.get("threatening_urls", 0)
+    
+    if threatening_urls > 0:
+        # Ada URL berbahaya terdeteksi
+        risk_score = 100
+        verdict = "malicious"
+    elif url_threat_results.get("status") == "unknown":
+        # URL belum pernah dianalisis
+        risk_score = 50
+        verdict = "suspicious"
+    else:
+        # Tidak ada ancaman terdeteksi
+        risk_score = 0
+        verdict = "safe"
+    
+    return URLScanResult(
+        url=request.url,
+        verdict=verdict,
+        risk_score=risk_score,
+        provider=url_threat_results.get("provider", settings.URL_THREAT_PROVIDER),
+        details=url_threat_results
+    )
+
+# ===========================================
+# ENDPOINT EXISTING: Scan Email (.eml)
+# ===========================================
 @app.post(f"{settings.API_V1_STR}/scan")
 async def scan_email(file: Annotated[UploadFile, File(description="File email .eml untuk dianalisis")]):
     """
     Endpoint utama untuk scan email phishing.
+    Flow:
+    1. Validasi file (ukuran + magic bytes)
+    2. Parse email (ekstrak header, body, URL)
+    3. Analisis otentikasi (SPF/DKIM/DMARC)
+    4. Analisis URL (Google Safe Browsing / VirusTotal)
+    5. Hitung skor risiko dan verdict
     """
     
     # --- Step 1: Validasi File ---
@@ -61,9 +121,9 @@ async def scan_email(file: Annotated[UploadFile, File(description="File email .e
     # --- Step 3: Analisis Otentikasi (SPF/DMARC) ---
     auth_results = await analyze_authenticity(parsed_email["from_domain"])
     
-    # --- Step 4: Ekstrak & Analisis URL (dengan factory provider) ---
+    # --- Step 4: Ekstrak & Analisis URL ---
     urls = parsed_email.get("urls", [])
-    url_threat_results = await check_url_threats(urls)  # ⭐ MENGGUNAKAN FACTORY
+    url_threat_results = await check_url_threats(urls)
     
     # --- Step 5: Hitung Skor Risiko ---
     risk_score = 0
@@ -89,14 +149,14 @@ async def scan_email(file: Annotated[UploadFile, File(description="File email .e
         risk_score += 25
         risk_factors.append(f"Authentication check error: {auth_results['error']}")
     
-    # ⭐ URL BERBAHAYA TERDETEKSI = +60 poin (HIGH RISK!)
+    # URL BERBAHAYA TERDETEKSI = +60 poin
     if url_threat_results.get("threatening_urls", 0) > 0:
         risk_score += 60
         threat_count = url_threat_results["threatening_urls"]
         provider_name = url_threat_results.get("provider", "URL Threat Detector")
         risk_factors.append(f"{threat_count} URL berbahaya terdeteksi oleh {provider_name}")
     
-    # Error saat check URL = +15 poin (inconclusive)
+    # Error saat check URL = +15 poin
     if url_threat_results.get("status") in ["error", "timeout"]:
         risk_score += 15
         risk_factors.append(f"URL check error: {url_threat_results.get('error', 'Unknown')}")
