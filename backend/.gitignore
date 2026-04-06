@@ -1,0 +1,10 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+
+# Backup files
+*.bak

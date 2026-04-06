@@ -50,3 +50,14 @@ build/
 
 # Docker
 docker-compose.override.yml
+
+# Database
+backend/data/*.db
+backend/data/*.log
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/

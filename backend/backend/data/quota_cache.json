@@ -1,8 +1,6 @@
 {
   "virustotal": {
-    "requests": [
-      1775112554.8384516
-    ],
+    "requests": [],
     "daily_count": 1,
     "monthly_count": 1,
     "last_reset_day": "2026-04-02",

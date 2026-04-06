@@ -61,3 +61,26 @@ email-phishing-scanner/
 ├── .gitignore                      # Git Ignore Rules
 ├── README.md                       # Project Overview (Root)
 └── backend/README.md               # Backend Documentation (YANG AKAN KITA BUAT)
+
+backend/
+├── data/               <-- Buat folder ini (untuk database SQLite)
+│   └── .gitignore      <-- Isi dengan: *.db *.log
+├── routes/             <-- Buat folder ini
+│   └── __init__.py     <-- Buat file kosong
+├── core/
+│   ├── __init__.py
+│   ├── analysis.py     <-- (Sudah ada?)
+│   ├── dns_resolver.py <-- (Sudah ada?)
+│   ├── email_parser.py <-- (Sudah ada?)
+│   ├── rate_limiter.py <-- (Sudah ada?)
+│   ├── safe_browsing.py<-- (Sudah ada?)
+│   ├── threat_detector.py<-- (Sudah ada?)
+│   └── virustotal.py   <-- (Sudah ada?)
+├── utils/
+│   ├── __init__.py
+│   ├── file_validator.py<-- (Sudah ada?)
+│   └── sanitizer.py    <-- (Sudah ada?)
+├── database.py         <-- 🔴 BELUM ADA (Buat Baru)
+├── main.py             <-- 🔴 UPDATE (Ganti dengan kode lengkap)
+├── models.py           <-- 🔴 UPDATE (Tambah model URLScan)
+└── requirements.txt    <-- ✅ SUDAH OK (tambah sqlalchemy)
