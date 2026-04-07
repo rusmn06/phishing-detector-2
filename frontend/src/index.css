@@ -1,8 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Custom styles (optional) */
+/* Custom styles */
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #f9fafb;

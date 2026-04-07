@@ -69,6 +69,7 @@ async def async_check_dmarc(domain: str, timeout: float = 5.0) -> Dict[str, Any]
 async def analyze_authenticity(from_domain: str) -> Dict[str, Any]:
     """
     Analisis lengkap SPF dan DMARC untuk domain pengirim.
+    Membedakan antara 'fail' (benar-benar gagal) vs 'error' (timeout/unreachable).
     """
     if not from_domain:
         return {
@@ -79,8 +80,8 @@ async def analyze_authenticity(from_domain: str) -> Dict[str, Any]:
     
     # Jalankan check SPF dan DMARC secara paralel
     spf_result, dmarc_result = await asyncio.gather(
-        async_check_spf(from_domain, timeout=5.0),
-        async_check_dmarc(from_domain, timeout=5.0),
+        async_check_spf(from_domain, timeout=10.0),
+        async_check_dmarc(from_domain, timeout=10.0),
         return_exceptions=True
     )
     
@@ -88,24 +89,48 @@ async def analyze_authenticity(from_domain: str) -> Dict[str, Any]:
     
     # --- Proses Hasil SPF ---
     if isinstance(spf_result, Exception):
-        results["spf"] = {"status": "error", "reason": str(spf_result)}
+        results["spf"] = {
+            "status": "error", 
+            "reason": str(spf_result),
+            "is_timeout": "timed out" in str(spf_result).lower()
+        }
     elif "error" in spf_result:
-        results["spf"] = {"status": "fail", "reason": spf_result["error"]}
+        error_msg = spf_result.get("error", "").lower()
+        if "timed out" in error_msg or "timeout" in error_msg:
+            results["spf"] = {
+                "status": "unknown",
+                "reason": "DNS query timeout - cannot verify SPF",
+                "is_timeout": True
+            }
+        else:
+            # Actual SPF error
+            results["spf"] = {"status": "fail", "reason": spf_result["error"]}
     else:
-        # check_spf mengembalikan dict dengan kunci 'valid' (boolean)
+        # Normal result
         is_valid = spf_result.get("valid", False)
         results["spf"] = {
             "status": "pass" if is_valid else "fail",
             "record": spf_result.get("record", ""),
         }
     
-    # --- Proses Hasil DMARC ---
+    # --- Proses Hasil DMARC (sama seperti SPF) ---
     if isinstance(dmarc_result, Exception):
-        results["dmarc"] = {"status": "error", "reason": str(dmarc_result)}
+        results["dmarc"] = {
+            "status": "error", 
+            "reason": str(dmarc_result),
+            "is_timeout": "timed out" in str(dmarc_result).lower()
+        }
     elif "error" in dmarc_result:
-        results["dmarc"] = {"status": "fail", "reason": dmarc_result["error"]}
+        error_msg = dmarc_result.get("error", "").lower()
+        if "timed out" in error_msg or "timeout" in error_msg:
+            results["dmarc"] = {
+                "status": "unknown",
+                "reason": "DNS query timeout - cannot verify DMARC",
+                "is_timeout": True
+            }
+        else:
+            results["dmarc"] = {"status": "fail", "reason": dmarc_result["error"]}
     else:
-        # check_dmarc mengembalikan dict dengan struktur kompleks
         is_valid = dmarc_result.get("valid", False)
         dmarc_record = dmarc_result.get("dmarc_record", {})
         policy = dmarc_record.get("p", "none") if isinstance(dmarc_record, dict) else "none"
@@ -115,8 +140,7 @@ async def analyze_authenticity(from_domain: str) -> Dict[str, Any]:
             "record": dmarc_result.get("record", ""),
         }
     
-    # --- DKIM (Sederhana) ---
-    # Validasi DKIM signature yang sebenarnya memerlukan parsing header 'DKIM-Signature'
+    # --- DKIM ---
     results["dkim"] = {
         "status": "not_checked", 
         "note": "DKIM signature verification requires full header analysis and public key retrieval."

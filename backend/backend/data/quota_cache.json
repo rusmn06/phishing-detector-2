@@ -1,14 +1,19 @@
 {
   "virustotal": {
-    "requests": [],
-    "daily_count": 1,
-    "monthly_count": 1,
-    "last_reset_day": "2026-04-02",
+    "requests": [
+      1775539213.2473767
+    ],
+    "daily_count": 9,
+    "monthly_count": 10,
+    "last_reset_day": "2026-04-07",
     "last_reset_month": "2026-04"
   },
   "google_safe_browsing": {
-    "requests": [],
-    "daily_count": 0,
-    "last_reset_day": "2026-04-02"
+    "requests": [
+      1775543963.8667238
+    ],
+    "daily_count": 26,
+    "last_reset_day": "2026-04-07",
+    "monthly_count": 26
   }
 }

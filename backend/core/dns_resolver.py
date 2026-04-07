@@ -1,26 +1,27 @@
 import dns.resolver
 from typing import Optional
+from config import settings
 
-def create_resilient_resolver(timeout: float = 5.0) -> dns.resolver.Resolver:
+def create_resilient_resolver(timeout: float = None) -> dns.resolver.Resolver:
     """
-    Membuat DNS resolver dengan timeout yang dikonfigurasi.
-    Mencegah aplikasi hang saat nameserver tidak merespons.
+    Membuat DNS resolver dengan timeout yang dikonfigurasi + fallback ke public DNS.
+    """
+    if timeout is None:
+        timeout = float(settings.DNS_TIMEOUT)  # Default dari .env
     
-    Args:
-        timeout: Waktu maksimal menunggu respons DNS (detik)
-        
-    Returns:
-        dns.resolver.Resolver yang sudah dikonfigurasi
-    """
     resolver = dns.resolver.Resolver()
     
-    # Timeout untuk setiap query individual
+    # Timeout yang lebih longgar
     resolver.timeout = timeout
+    resolver.lifetime = timeout * 3  # Total waktu untuk semua retry
     
-    # Lifetime total untuk semua retry
-    resolver.lifetime = timeout * 2
-    
-    # Optional: Set nameserver spesifik (misal Google DNS)
-    # resolver.nameservers = ['8.8.8.8', '8.8.4.4']
+    # Fallback ke public DNS jika nameserver default bermasalah
+    # Prioritas: Google DNS → Cloudflare → OpenDNS
+    resolver.nameservers = [
+        '8.8.8.8',    # Google
+        '8.8.4.4',    # Google Secondary
+        '1.1.1.1',    # Cloudflare
+        '1.0.0.1',    # Cloudflare Secondary
+    ]
     
     return resolver

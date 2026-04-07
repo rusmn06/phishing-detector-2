@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getDashboardStats } from '../services/api';
+import { getDashboardStats, getHistory } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
-import { Mail, Shield, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Mail, Shield, AlertTriangle, TrendingUp, Clock, Eye } from 'lucide-react';
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,8 +16,13 @@ function Dashboard() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const response = await getDashboardStats();
-      setStats(response.data);
+      const [statsResponse, historyResponse] = await Promise.all([
+        getDashboardStats(),
+        getHistory({ page: 1, limit: 5 }) // Ambil 5 activity terbaru
+      ]);
+      
+      setStats(statsResponse.data);
+      setRecentActivity(historyResponse.data.items || []);
       setError(null);
     } catch (err) {
       console.error('Failed to load dashboard stats:', err);
@@ -26,8 +32,24 @@ function Dashboard() {
     }
   };
 
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins} menit yang lalu`;
+    if (diffHours < 24) return `${diffHours} jam yang lalu`;
+    if (diffDays < 7) return `${diffDays} hari yang lalu`;
+    return date.toLocaleDateString('id-ID');
+  };
+
   if (loading) {
-    return <LoadingSpinner text="Memuat statistik..." />;
+    return <LoadingSpinner text="Memuat dashboard..." />;
   }
 
   if (error) {
@@ -139,13 +161,58 @@ function Dashboard() {
             Last 24h: {stats?.recent_24h || 0} scans
           </p>
         </div>
-        <div className="text-center py-8 text-gray-500">
-          <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Belum ada aktivitas terbaru</p>
-          <p className="text-sm mt-2">
-            Upload email untuk memulai scanning
-          </p>
-        </div>
+
+        {recentActivity.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Belum ada aktivitas terbaru</p>
+            <p className="text-sm mt-2">
+              Upload email untuk memulai scanning
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 text-sm font-medium text-gray-600">File Name</th>
+                  <th className="text-left py-2 text-sm font-medium text-gray-600">Status</th>
+                  <th className="text-left py-2 text-sm font-medium text-gray-600">Time</th>
+                  <th className="text-right py-2 text-sm font-medium text-gray-600">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {recentActivity.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="py-3 text-sm text-gray-900">{record.filename}</td>
+                    <td className="py-3">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        record.verdict === 'phishing' ? 'bg-red-100 text-red-800' :
+                        record.verdict === 'suspicious' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {record.verdict}
+                      </span>
+                    </td>
+                    <td className="py-3 text-sm text-gray-600">
+                      <Clock className="inline h-3 w-3 mr-1" />
+                      {formatRelativeTime(record.scanned_at)}
+                    </td>
+                    <td className="py-3 text-right">
+                      <a
+                        href="/history"
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center justify-end"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

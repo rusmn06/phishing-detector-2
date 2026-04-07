@@ -19,8 +19,9 @@ from utils.sanitizer import sanitize_html
 # Import core logic
 from core.email_parser import parse_eml_file
 from core.analysis import analyze_authenticity
-from core.threat_detector import check_url_threats
 from core.rate_limiter import quota_manager
+from core.safe_browsing import check_urls_safe_browsing
+from core.virustotal import virustotal_adapter
 
 # Import models
 from models import URLScanRequest, URLScanResult
@@ -154,7 +155,7 @@ async def scan_url(request: URLScanRequest):
         )
     
     # Cek URL menggunakan threat detector (VirusTotal)
-    url_threat_results = await check_url_threats([request.url])
+    url_threat_results = await virustotal_adapter.check_urls([request.url])
     
     # Hitung skor risiko berdasarkan hasil
     risk_score = 0
@@ -260,40 +261,66 @@ async def scan_email(
     # --- Step 4: Ekstrak & Analisis URL ---
     urls = parsed_email.get("urls", [])
     logger.info(f"Found {len(urls)} URLs in email")
-    url_threat_results = await check_url_threats(urls)
+    url_threat_results = await check_urls_safe_browsing(urls)
     
     # --- Step 5: Hitung Skor Risiko ---
     risk_score = 0
     risk_factors = []
     
-    # DMARC fail = +40 poin
-    if auth_results.get("dmarc", {}).get("status") == "fail":
+    def get_status(auth_dict: dict, key: str) -> str:
+        """Safely get status from auth_results with fallback."""
+        try:
+            return auth_dict.get(key, {}).get("status", "unknown")
+        except (AttributeError, TypeError):
+            return "unknown"
+    
+    def is_timeout(auth_dict: dict, key: str) -> bool:
+        """Check if auth check timed out."""
+        try:
+            return auth_dict.get(key, {}).get("is_timeout", False)
+        except (AttributeError, TypeError):
+            return False
+    
+    # --- DMARC Scoring ---
+    dmarc_status = get_status(auth_results, "dmarc")
+    
+    if dmarc_status == "fail":
         risk_score += 40
         risk_factors.append("DMARC verification failed")
+    elif dmarc_status == "error" or is_timeout(auth_results, "dmarc"):
+        # Timeout/error - jangan tambah poin, hanya info
+        risk_factors.append("⚠️ DMARC check timeout - tidak dapat diverifikasi")
     
-    # SPF fail = +30 poin
-    if auth_results.get("spf", {}).get("status") == "fail":
+    # --- SPF Scoring ---
+    spf_status = get_status(auth_results, "spf")
+    
+    if spf_status == "fail":
         risk_score += 30
         risk_factors.append("SPF verification failed")
+    elif spf_status == "error" or is_timeout(auth_results, "spf"):
+        # Timeout/error - jangan tambah poin
+        risk_factors.append("⚠️ SPF check timeout - tidak dapat diverifikasi")
     
-    # DKIM not configured = +20 poin
-    if auth_results.get("dkim", {}).get("status") == "not_configured":
+    # --- DKIM Scoring ---
+    dkim_status = get_status(auth_results, "dkim")
+    
+    if dkim_status == "not_configured":
         risk_score += 20
         risk_factors.append("DKIM not configured for domain")
     
-    # Error saat check otentikasi = +25 poin
+    # --- Error saat check otentikasi ---
     if "error" in auth_results:
         risk_score += 25
         risk_factors.append(f"Authentication check error: {auth_results['error']}")
     
-    # URL BERBAHAYA TERDETEKSI = +60 poin (HIGH RISK!)
+    # --- URL BERBAHAYA TERDETEKSI = +60 poin ---
     if url_threat_results.get("threatening_urls", 0) > 0:
         risk_score += 60
         threat_count = url_threat_results["threatening_urls"]
         provider_name = url_threat_results.get("provider", "URL Threat Detector")
         risk_factors.append(f"{threat_count} URL berbahaya terdeteksi oleh {provider_name}")
     
-    # Error saat check URL = +15 poin
+    # --- Error saat check URL ---
     if url_threat_results.get("status") in ["error", "timeout"]:
         risk_score += 15
         risk_factors.append(f"URL check error: {url_threat_results.get('error', 'Unknown')}")

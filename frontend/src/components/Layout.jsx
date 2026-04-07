@@ -13,7 +13,7 @@ function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navbar */}
       <nav className="bg-white shadow-md border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,12 +62,12 @@ function Layout() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-auto">
+      <footer className="bg-white border-t mt-auto flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
           © 2026 Email Phishing Scanner - Internal Security Tool
         </div>
