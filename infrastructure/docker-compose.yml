@@ -60,39 +60,13 @@ services:
   # Reverse Proxy: Nginx (SSL Termination + Security)
   # ===========================================
   reverse-proxy:
-    image: nginx:alpine
-    container_name: phishing-proxy
-    restart: unless-stopped
-    ports:
-      - "80:80"   # HTTP redirect
-      - "443:443" # HTTPS
-    volumes:
-      # Nginx configuration
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/react-nginx.conf:/etc/nginx/conf.d/react.conf:ro
-      # SSL Certificates (mount from Azure Key Vault or local)
-      - ./nginx/certs:/etc/nginx/certs:ro
-      # Logs
-      - ./logs/nginx:/var/log/nginx
-    networks:
-      - phishing-net
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-networks:
-  phishing-net:
-    driver: bridge
-    name: phishing-scanner-network
-
-# Optional: Volumes for persistent data
-volumes:
-  quota-cache:
-    driver: local
+  image: nginx:alpine
+  container_name: phishing-proxy
+  restart: unless-stopped
+  ports:
+    - "80:80"
+    - "443:443"
+  volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    - ./nginx/certs:/etc/nginx/certs:ro
+    - ./logs/nginx:/var/log/nginx
