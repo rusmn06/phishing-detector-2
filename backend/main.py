@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 import logging
-from fastapi import Depends, FastAPI, File, HTTPException, Request, Status, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -250,7 +251,7 @@ async def scan_url(request: URLScanRequest):
     # Validate URL format
     if not request.url.startswith(("http://", "https://")):
         raise HTTPException(
-            status_code=Status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="URL must start with http:// or https://"
         )
     
