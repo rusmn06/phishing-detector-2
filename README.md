@@ -1,68 +1,6 @@
 # Struktur Folder Lengkap
 Struktur ini mencerminkan keadaan proyek saat ini setelah implementasi **Validasi, Parsing, Analisis SPF/DMARC, Sanitasi HTML, dan Integrasi VirusTotal**.
 
-phising-detector/
-│
-├── backend/                        # FastAPI Application
-│   ├── .venv/                      # Python Virtual Environment (IGNORED in Git)
-│   ├── core/                       # Core Business Logic
-│   │   ├── __init__.py
-│   │   ├── analysis.py             # Logika scoring risiko & agregasi hasil
-│   │   ├── dns_resolver.py         # DNS Resolver dengan timeout control
-│   │   ├── email_parser.py         # Parsing file .eml (mailparser) + sanitasi awal
-│   │   ├── safe_browsing.py        # Adapter Google Safe Browsing (Legacy/Optional)
-│   │   ├── virustotal.py           # Adapter VirusTotal API v3
-│   │   ├── threat_detector.py      # Factory Pattern untuk switch provider
-│   │   └── url_extractor.py        # Ekstraksi URL dari konten email
-│   │
-│   ├── utils/                      # Utility Functions
-│   │   ├── __init__.py
-│   │   ├── file_validator.py       # Validasi Magic Bytes & Ukuran File
-│   │   └── sanitizer.py            # Sanitasi HTML output (bleach)
-│   │
-│   ├── tests/                      # Unit & Integration Tests
-│   │   ├── __init__.py
-│   │   ├── test_file_validator.py
-│   │   ├── test_email_parser.py
-│   │   └── test_threat_detector.py
-│   │
-│   ├── config.py                   # Konfigurasi Environment (Pydantic Settings)
-│   ├── main.py                     # Entry Point FastAPI & API Routes
-│   ├── models.py                   # Pydantic Models untuk Request/Response
-│   ├── requirements.txt            # Python Dependencies
-│   └── README.md                   # Dokumentasi Khusus Backend (Lihat di bawah)
-│
-├── frontend/                       # React Application (Vite + Tailwind)
-│   ├── node_modules/               # Node Dependencies (IGNORED in Git)
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── UploadArea.jsx
-│   │   │   ├── ScanResult.jsx
-│   │   │   └── LoadingSpinner.jsx
-│   │   ├── services/
-│   │   │   └── api.js              # Axios instance
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-├── infrastructure/                 # Infrastructure-as-Code
-│   ├── nginx/
-│   │   ├── nginx.conf              # Reverse Proxy & Security Headers
-│   │   └── certs/                  # SSL Certificates (IGNORED in Git)
-│   ├── logs/                       # Log Files (Auto-generated)
-│   ├── docker-compose.yml          # Orkestrasi Services
-│   ├── Dockerfile.backend
-│   └── Dockerfile.frontend
-│
-├── .env                            # Environment Variables (IGNORED in Git!)
-├── .env.example                    # Template Environment Variables
-├── .gitignore                      # Git Ignore Rules
-└── README.md                       # Project Overview (Root)
-
 # Email Phishing Scanner - Backend Documentation
 
 Backend aplikasi ini dibangun menggunakan **FastAPI** (Python) dengan arsitektur modular yang mengutamakan keamanan, skalabilitas, dan kemudahan maintenance.
